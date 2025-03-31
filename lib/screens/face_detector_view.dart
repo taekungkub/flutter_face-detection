@@ -153,7 +153,6 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
         );
       }
 
-      // ตรวจสอบ Landmark สำคัญที่ต้องมี
       bool hasLeftEye = face.landmarks.containsKey(FaceLandmarkType.leftEye);
       bool hasRightEye = face.landmarks.containsKey(FaceLandmarkType.rightEye);
       bool hasNose = face.landmarks.containsKey(FaceLandmarkType.noseBase);
@@ -182,6 +181,10 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
 
       if (hasLeftEye && hasRightEye && hasNose && hasLeftEar && hasRightEar) {
         print("✅ All key facial landmarks detected");
+      }
+
+      if (isFaceCovered(face)) {
+        livenessStatus = 21; // Face is covered
       }
 
       // Face Orientation Check
@@ -225,7 +228,7 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
       }
 
       // Check smiling probability
-      if (face.smilingProbability != null && livenessStatus == -1) {
+      if (face.smilingProbability != null) {
         if (face.smilingProbability! > 0.5) {
           livenessStatus = 16; // Smile detected
         }
@@ -296,7 +299,7 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
 
       // If no issue found, mark as looking straight
       if (livenessStatus == -1) {
-        livenessStatus = 0; // Look straight
+        livenessStatus = 22; // N/A
       }
 
       // Get the current expected state
@@ -402,6 +405,8 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
         return 'Change background';
       case 20:
         return 'Face not center';
+      case 21:
+        return 'Face is covered';
       default:
         return 'N/A';
     }
@@ -426,5 +431,58 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
         );
       },
     );
+  }
+
+  bool isFaceCovered(Face face) {
+    // ตรวจสอบว่าจำนวน Landmark น้อยเกินไปหรือไม่
+    if (face.landmarks.length < 5) {
+      print("❗ Face might be covered: Too few landmarks detected.");
+      return true;
+    }
+
+    // ตรวจสอบว่า Landmark สำคัญหายไปหรือไม่
+    bool hasLeftEye = face.landmarks.values.any(
+      (landmark) => landmark?.type == FaceLandmarkType.leftEye,
+    );
+    bool hasRightEye = face.landmarks.values.any(
+      (landmark) => landmark?.type == FaceLandmarkType.rightEye,
+    );
+    bool hasNose = face.landmarks.values.any(
+      (landmark) => landmark?.type == FaceLandmarkType.noseBase,
+    );
+    bool hasMouth = face.landmarks.values.any(
+      (landmark) =>
+          landmark?.type == FaceLandmarkType.bottomMouth ||
+          landmark?.type == FaceLandmarkType.leftMouth ||
+          landmark?.type == FaceLandmarkType.rightMouth,
+    );
+
+    if (!hasLeftEye || !hasRightEye || !hasNose || !hasMouth) {
+      print("❗ Face might be covered: Missing essential landmarks.");
+      return true;
+    }
+
+    // ตรวจสอบความน่าจะเป็นของดวงตาที่เปิด
+    double leftEyeOpenProb = face.leftEyeOpenProbability ?? 0.0;
+    double rightEyeOpenProb = face.rightEyeOpenProbability ?? 0.0;
+
+    if (leftEyeOpenProb < 0.2 && rightEyeOpenProb < 0.2) {
+      print("❗ Face might be covered: Low eye openness probability.");
+      return true;
+    }
+
+    // ตรวจสอบขนาด Bounding Box ว่าครอบคลุมตำแหน่ง Landmark หรือไม่
+    Rect boundingBox = face.boundingBox;
+    for (var entry in face.landmarks.entries) {
+      final position = entry.value?.position;
+      if (position != null &&
+          !boundingBox.contains(Offset(position.x.toDouble(), position.y.toDouble()))) {
+        print("❗ Face might be covered: Landmark outside bounding box.");
+        return true;
+      }
+    }
+
+    print("Face is not covered.");
+    return false;
   }
 }
