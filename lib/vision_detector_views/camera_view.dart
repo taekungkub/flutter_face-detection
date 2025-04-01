@@ -4,6 +4,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test_version/core/utils/throttler.dart';
+import 'package:flutter_test_version/painters/scanner_overlay.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 
 class CameraView extends StatefulWidget {
@@ -82,6 +83,15 @@ class _CameraViewState extends State<CameraView> {
   }
 
   Widget _liveFeedBody() {
+    final scanWindow = Rect.fromCenter(
+      center: Offset(
+        MediaQuery.of(context).size.width / 2,
+        MediaQuery.of(context).size.height * 0.45,
+      ),
+      width: MediaQuery.of(context).size.width * 0.7,
+      height: MediaQuery.of(context).size.width * 0.7,
+    );
+
     if (_cameras.isEmpty) return Container();
     if (_controller == null) return Container();
     if (_controller?.value.isInitialized == false) return Container();
@@ -96,55 +106,48 @@ class _CameraViewState extends State<CameraView> {
           //           ? Center(child: const Text('Changing camera lens'))
           //           : CameraPreview(_controller!, child: widget.customPaint),
           // ),
-          Positioned(
-            bottom: 0,
-            left: 150,
-            child: Text(
-              widget.faceText ?? '',
-              style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-          ),
 
-          Positioned(
-            top: 0,
-            left: 150,
-            child: Text(
-              widget.expectStateText ?? '',
-              style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-          ),
+          // // 🔲 Scanner Overlay
+          // Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
+          // Center(
+          //   child: ClipRRect(
+          //     borderRadius: BorderRadius.circular(20),
+          //     child: Container(
+          //       decoration: BoxDecoration(
+          //         border: Border.all(color: Colors.white.withOpacity(0.7), width: 2),
+          //         boxShadow: [
+          //           BoxShadow(
+          //             color: Colors.black.withOpacity(0.3),
+          //             offset: Offset(0, 4), // Shadow offset
+          //             blurRadius: 8, // Shadow blur radius
+          //           ),
+          //         ],
+          //       ),
+          //       child: Align(
+          //         alignment: Alignment.center,
+          //         widthFactor: 0.8,
+          //         heightFactor: 0.6,
+          //         child: CameraPreview(_controller!),
+          //       ),
+          //     ),
+          //   ),
+          // ),
 
-          // 🔲 Scanner Overlay
-          Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
-          Center(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.white.withOpacity(0.7), width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      offset: Offset(0, 4), // Shadow offset
-                      blurRadius: 8, // Shadow blur radius
-                    ),
-                  ],
-                ),
-                child: Align(
-                  alignment: Alignment.center,
-                  widthFactor: 0.8,
-                  heightFactor: 0.6,
-                  child: CameraPreview(_controller!),
-                ),
-              ),
-            ),
-          ),
-          _backButton(),
-          _switchLiveCameraToggle(),
-          _detectionViewModeToggle(),
-
+          // _switchLiveCameraToggle(),
+          // _detectionViewModeToggle(),
           // _zoomControl(),
           // _exposureControl(),
+
+          // ClipPath(
+          //   clipper: CircleClipper(),
+          //   child: Container(color: Colors.black.withOpacity(0.5)),
+          // ),
+          // CustomPaint(painter: CircleBorderPainter(), child: Container()),
+          CameraPreview(_controller!),
+          CustomPaint(painter: ScannerOverlay(scanWindow)),
+          _backButton(),
+          _expectText(),
+          _faceText(),
         ],
       ),
     );
@@ -296,6 +299,73 @@ class _CameraViewState extends State<CameraView> {
     ),
   );
 
+  Widget _expectText() {
+    return Positioned(
+      top: 140,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.6),
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, spreadRadius: 2),
+            ],
+          ),
+          child: Text(
+            widget.expectStateText ?? 'Position your face in the frame',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _faceText() {
+    return Positioned(
+      bottom: 140,
+      left: 0,
+      right: 0,
+      child: Center(
+        child:
+            widget.faceText?.isNotEmpty == true
+                ? Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    widget.faceText ?? '',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                )
+                : null,
+      ),
+    );
+  }
+
   Future _startLiveFeed() async {
     final camera = _cameras[_cameraIndex];
     _controller = CameraController(
@@ -432,4 +502,94 @@ class _CameraViewState extends State<CameraView> {
       ),
     );
   }
+}
+
+// Custom clipper for creating a circular hole
+// class CircleClipper extends CustomClipper<Path> {
+//   @override
+//   Path getClip(Size size) {
+//     final path = Path();
+
+//     // Create a path that covers the entire screen
+//     path.addRect(Rect.fromLTWH(0, 0, size.width, size.height));
+
+//     // Cut out a circular hole
+//     path.addOval(
+//       Rect.fromCircle(
+//         center: Offset(size.width / 2, size.height * 0.45),
+//         radius: size.width * 0.35,
+//       ),
+//     );
+
+//     // Use even-odd fill type to create the "hole" effect
+//     path.fillType = PathFillType.evenOdd;
+
+//     return path;
+//   }
+
+//   @override
+//   bool shouldReclip(CustomClipper<Path> oldClipper) => false;
+// }
+
+// // Painter just for the white border circle
+// class CircleBorderPainter extends CustomPainter {
+//   @override
+//   void paint(Canvas canvas, Size size) {
+//     final center = Offset(size.width / 2, size.height * 0.45);
+//     final radius = size.width * 0.35;
+
+//     final paint =
+//         Paint()
+//           ..color = Colors.white
+//           ..style = PaintingStyle.stroke
+//           ..strokeWidth = 2.0;
+
+//     canvas.drawCircle(center, radius, paint);
+//   }
+
+//   @override
+//   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+// }
+
+class CircleClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+
+    // Create a path covering the entire screen
+    path.addRect(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    // Cut out a circle in the middle
+    final center = Offset(size.width / 2, size.height * 0.45);
+    final radius = size.width * 0.35;
+
+    path.addOval(Rect.fromCircle(center: center, radius: radius));
+
+    // Use even-odd fill type to create the "hole" effect
+    path.fillType = PathFillType.evenOdd;
+
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
+}
+
+class CircleBorderPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height * 0.45);
+    final radius = size.width * 0.35;
+
+    final paint =
+        Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.0;
+
+    canvas.drawCircle(center, radius, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

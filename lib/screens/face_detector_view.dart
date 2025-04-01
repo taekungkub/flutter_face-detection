@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test_version/core/utils/utils.dart';
-import 'package:flutter_test_version/painters/face_detector_painter.dart';
 import 'package:flutter_test_version/vision_detector_views/detector_view.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 
@@ -40,6 +39,8 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
       customPaint: _customPaint,
       text: _text,
       onImage: _processImage,
+
+      // onImage: (inputImage) => null,
       initialCameraLensDirection: _cameraLensDirection,
       onCameraLensDirectionChanged: (value) => _cameraLensDirection = value,
       faceText: faceText,
